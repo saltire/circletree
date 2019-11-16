@@ -3,13 +3,15 @@ int rate = 30;
 int xcells = 20;
 int ycells = 10;
 float circleRadius = 275;
-int cellCurvePoints = 5;
+int segmentPoints = 5;
 float cellAngle = TAU / xcells;
-float pointAngle = cellAngle / cellCurvePoints;
-float ringWidth = circleRadius / ycells;
+float cellWidth = circleRadius / ycells;
+float pointAngle = cellAngle / segmentPoints;
+float pointWidth = cellWidth / segmentPoints;
 
-float skewAmount = 0;
+float skewAmount = TAU / 8;
 float skewPeriod = 2000;
+float skew;
 
 boolean cells[][] = new boolean[xcells][ycells];
 
@@ -31,28 +33,37 @@ void setup() {
 void draw() {
   translate(width / 2, height / 2);
 
-  float skew = sin(TAU * millis() / skewPeriod) * skewAmount;
+  skew = sin(TAU * millis() / skewPeriod) * skewAmount;
 
   for (int y = 0; y < ycells; y++) {
     for (int x = 0; x < xcells; x++) {
-      float radius = y * ringWidth;
-      float angle = x * cellAngle + y * skew;
+      float radius = y * cellWidth;
+      float angle = x * cellAngle;
 
       fill(cells[x][y] ? 255 : 0);
       beginShape();
-        vertex(sin(angle) * radius, cos(angle) * radius);
-        for (float a = 0; a < cellCurvePoints; a++) {
-          angle += pointAngle;
-          vertex(sin(angle) * radius, cos(angle) * radius);
+        for (float a = 0; a < segmentPoints; a++) {
+          radius += pointWidth;
+          polarVertex(angle, radius);
         }
-        radius += ringWidth;
-        angle += skew;
-        vertex(sin(angle) * radius, cos(angle) * radius);
-        for (float a = 0; a < cellCurvePoints; a++) {
+        for (float a = 0; a < segmentPoints; a++) {
+          angle += pointAngle;
+          polarVertex(angle, radius);
+        }
+        for (float a = 0; a < segmentPoints; a++) {
+          radius -= pointWidth;
+          polarVertex(angle, radius);
+        }
+        for (float a = 0; a < segmentPoints; a++) {
           angle -= pointAngle;
-          vertex(sin(angle) * radius, cos(angle) * radius);
+          polarVertex(angle, radius);
         }
       endShape(CLOSE);
     }
   }
+}
+
+void polarVertex(float angle, float radius) {
+  float skewAngle = angle + skew * radius / circleRadius;
+  vertex(sin(skewAngle) * radius, cos(skewAngle) * radius);
 }
