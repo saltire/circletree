@@ -20,11 +20,13 @@ color yellow = color(255, 255, 0);
 color[] addColors = { red, green, blue };
 color[] subColors = { cyan, magenta, yellow };
 
-float cycleTime = 1200;
-float pauseTime = 300;
-float animTime = 700;
-float spreadTime = 400;
-float spreadRandom = 50;
+float shutterPeriod = 1500; // window for on OR off animation
+float shutterDuration = 700; // animation length within window
+float shutterStart = (shutterPeriod - shutterDuration) / 2; // animation start time within window
+float shutterMaxStartMod = 400; // max +/- variation of animation start time
+float tt; // milliseconds into on AND off cycle
+float t; // milliseconds into on OR off cycle
+boolean firstHalf; // on or off
 
 float colorSpread = 20;
 
@@ -48,10 +50,9 @@ void setup() {
 }
 
 void draw() {
-  float c = floor(millis() / ((cycleTime + pauseTime) * 2));
-  float tt = millis() % ((cycleTime + pauseTime) * 2); // 0 -> ((ct + pt) * 2)
-  float t = tt % (cycleTime + pauseTime); // 0 -> (ct + pt)
-  boolean firstHalf = tt < cycleTime + pauseTime;
+  tt = millis() % (shutterPeriod * 2); // 0 -> ((ct + pt) * 2)
+  t = tt % shutterPeriod; // 0 -> (ct + pt)
+  firstHalf = tt < shutterPeriod;
 
   for (int x = 0; x < xcells; x++) {
     for (int y = 0; y < ycells; y++) {
@@ -70,32 +71,17 @@ void draw() {
         rect(0, 0, xs, ys);
 
         blendMode(light ? MULTIPLY : SCREEN);
-        float animStart = (cycleTime - animTime) / 2;
-        for (int i = 0; i < 3; i++) {
-          fill((light ? subColors : addColors)[i]);
-          float cStart = animStart +
-            map(noise(x, y, i), 0, 1, -spreadTime, spreadTime);
-            // (i - 1) * spreadTime +
-            // map(noise(x, y, i), 0, 1, -spreadRandom, spreadRandom);
-          float w = constrain(norm(t, cStart, cStart + animTime), 0, 1);
-          rect(0, 0, xs * ease(w), ys);
+        for (int c = 0; c < 3; c++) {
+          fill((light ? subColors : addColors)[c]);
+          float startMod = lerp(-1, 1, noise(x, y, c));
+          rect(0, 0, xs * getAnimPos(startMod), ys);
         }
       pop();
     }
   }
+}
 
-
-  // float dist = 100;
-  // float radius = 300;
-  // push();
-  //   translate(width / 2, height / 2);
-  //   for (int i = 0; i < 3; i++) {
-  //     push();
-  //       float angle = float(i) / 3 * TAU;
-  //       translate(sin(angle) * dist, cos(angle) * dist);
-  //       fill(subColors[i]);
-  //       circle(0, 0, radius);
-  //     pop();
-  //   }
-  // pop();
+float getAnimPos(float startMod) {
+  float start = shutterStart + startMod * shutterMaxStartMod;
+  return ease(constrain(norm(t, start, start + shutterDuration), 0, 1));
 }

@@ -5,7 +5,9 @@ float circleRadius;
 int segmentPoints = 10;
 
 int maxDepth = 8;
-int maxDrawDepth = 8;
+int maxDrawDepth = maxDepth;
+
+float cellNoiseScale = 5;
 
 float skewAmount = TAU / 8;
 float skewPeriod = 2000;
@@ -16,7 +18,14 @@ float varyPeriod = 1600;
 float vary = 0;
 float varyNoiseScale = .5;
 
-float cellNoiseScale = 5;
+float shutterPeriod = 3000;
+float shutterTime = 600;
+float shutterModAmount = .5;
+float shutterNoiseScale = .5;
+float shutterPhase;
+boolean shutterClosing;
+float shutterPos;
+
 
 class KDTree {
   float initX;
@@ -26,6 +35,9 @@ class KDTree {
   boolean xAxis;
   boolean white;
   float thisVary;
+  // float shutterModR;
+  // float shutterModG;
+  // float shutterModB;
 
   KDTree leftChild;
   KDTree rightChild;
@@ -37,9 +49,10 @@ class KDTree {
 
     xAxis = depth % 2 == 0;
     white = noise(x * cellNoiseScale, y * cellNoiseScale) > .5;
-    thisVary = map(noise(initX * varyNoiseScale, initY * varyNoiseScale), 0, 1, -1, 1) *
-      // Increase variation with depth.
-      map(depth, 0, maxDepth - 1, .25, 1);
+    thisVary = getNoise(varyNoiseScale) * map(depth, 0, maxDepth, .25, 1); // Increase with depth
+    // shutterModR = getNoise(shutterNoiseScale, 0);
+    // shutterModG = getNoise(shutterNoiseScale, 1);
+    // shutterModB = getNoise(shutterNoiseScale, 2);
 
     if (depth < maxDepth) {
       if (xAxis) {
@@ -51,6 +64,14 @@ class KDTree {
         rightChild = new KDTree(x, y + radius / 2, angle, radius / 2, depth + 1);
       }
     }
+  }
+
+  float getNoise(float noiseScale) {
+    return lerp(-1, 1, noise(initX * noiseScale, initY * noiseScale));
+  }
+
+  float getNoise(float noiseScale, float z) {
+    return lerp(-1, 1, noise(initX * noiseScale, initY * noiseScale, z * noiseScale));
   }
 
   void draw(float x, float y, float angle, float radius) {
@@ -70,32 +91,35 @@ class KDTree {
     }
     else {
       fill(white ? 255 : 0);
-
-      float xx = x;
-      float yy = y;
-
-      float xInc = angle / segmentPoints;
-      float yInc = radius / segmentPoints;
-
-      beginShape();
-        for (float a = 0; a < segmentPoints; a++) {
-          yy += yInc;
-          polarVertex(xx, yy);
-        }
-        for (float a = 0; a < segmentPoints; a++) {
-          xx += xInc;
-          polarVertex(xx, yy);
-        }
-        for (float a = 0; a < segmentPoints; a++) {
-          yy -= yInc;
-          polarVertex(xx, yy);
-        }
-        for (float a = 0; a < segmentPoints; a++) {
-          xx -= xInc;
-          polarVertex(xx, yy);
-        }
-      endShape(CLOSE);
+      drawCell(x, y, angle, radius);
     }
+  }
+
+  void drawCell(float x, float y, float angle, float radius) {
+    float xx = x;
+    float yy = y;
+
+    float xInc = angle / segmentPoints;
+    float yInc = radius / segmentPoints;
+
+    beginShape();
+      for (float a = 0; a < segmentPoints; a++) {
+        yy += yInc;
+        polarVertex(xx, yy);
+      }
+      for (float a = 0; a < segmentPoints; a++) {
+        xx += xInc;
+        polarVertex(xx, yy);
+      }
+      for (float a = 0; a < segmentPoints; a++) {
+        yy -= yInc;
+        polarVertex(xx, yy);
+      }
+      for (float a = 0; a < segmentPoints; a++) {
+        xx -= xInc;
+        polarVertex(xx, yy);
+      }
+    endShape(CLOSE);
   }
 }
 
@@ -118,6 +142,12 @@ void draw() {
 
   // skew = sin(TAU * millis() / skewPeriod) * skewAmount;
   vary = sin(TAU * millis() / varyPeriod) * varyAmount;
+
+  shutterPhase = (millis() / shutterPeriod) % 1;
+  shutterClosing = shutterPhase >= .5;
+  float shutterMS = millis() % (shutterPeriod / 2);
+  float shutterStart = (shutterPeriod / 2 - shutterTime) / 2;
+  shutterPos = constrain(norm(shutterMS, shutterStart, shutterStart + shutterTime), 0, 1);
 
   tree.draw(0, 0, TAU, circleRadius);
 }
