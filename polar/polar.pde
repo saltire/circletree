@@ -14,18 +14,31 @@ float skewPeriod = 2000;
 float skew = 0;
 
 float varyAmount = 1;
-float varyPeriod = 1600;
+float varyPeriod = 6000;
 float vary = 0;
 float varyNoiseScale = .5;
 
-float shutterPeriod = 3000;
-float shutterTime = 600;
-float shutterModAmount = .5;
-float shutterNoiseScale = .5;
-float shutterPhase;
-boolean shutterClosing;
-float shutterPos;
+float shutterPeriod = 1500; // window for on OR off animation
+float shutterDuration = 700; // animation length within window
+float shutterStart = (shutterPeriod - shutterDuration) / 2; // animation start time within window
+float shutterMaxStartMod = 400; // max +/- variation of animation start time
+float tt; // milliseconds into on AND off cycle
+float t; // milliseconds into on OR off cycle
+boolean firstHalf; // on or off
 
+float getAnimPos(float startMod) {
+  float start = shutterStart + startMod * shutterMaxStartMod;
+  return ease(constrain(norm(t, start, start + shutterDuration), 0, 1));
+}
+
+color red = color(255, 0, 0);
+color green = color(0, 255, 0);
+color blue = color(0, 0, 255);
+color cyan = color(0, 255, 255);
+color magenta = color(255, 0, 255);
+color yellow = color(255, 255, 0);
+color[] addColors = { red, green, blue };
+color[] subColors = { cyan, magenta, yellow };
 
 class KDTree {
   float initX;
@@ -35,9 +48,6 @@ class KDTree {
   boolean xAxis;
   boolean white;
   float thisVary;
-  // float shutterModR;
-  // float shutterModG;
-  // float shutterModB;
 
   KDTree leftChild;
   KDTree rightChild;
@@ -50,9 +60,6 @@ class KDTree {
     xAxis = depth % 2 == 0;
     white = noise(x * cellNoiseScale, y * cellNoiseScale) > .5;
     thisVary = getNoise(varyNoiseScale) * map(depth, 0, maxDepth, .25, 1); // Increase with depth
-    // shutterModR = getNoise(shutterNoiseScale, 0);
-    // shutterModG = getNoise(shutterNoiseScale, 1);
-    // shutterModB = getNoise(shutterNoiseScale, 2);
 
     if (depth < maxDepth) {
       if (xAxis) {
@@ -90,7 +97,23 @@ class KDTree {
       }
     }
     else {
-      fill(white ? 255 : 0);
+      if (white) {
+        noStroke();
+        fill(firstHalf ? 255 : 0);
+        drawCell(x, y, angle, radius);
+
+        push();
+          blendMode(firstHalf ? MULTIPLY : SCREEN);
+          for (int c = 0; c < 3; c++) {
+            fill((firstHalf ? subColors : addColors)[c]);
+            float startMod = lerp(-1, 1, noise(initX, initY, c));
+            drawCell(x, y, angle * getAnimPos(startMod), radius);
+          }
+        pop();
+      }
+
+      stroke(255);
+      noFill();
       drawCell(x, y, angle, radius);
     }
   }
@@ -129,7 +152,7 @@ void setup() {
   frameRate(rate);
   size(1000, 1000);
   noiseSeed(49152);
-  stroke(255);
+  ellipseMode(RADIUS);
 
   circleRadius = min(width, height) * circleDiameterPct / 2;
 
@@ -141,14 +164,14 @@ void draw() {
   translate(width / 2, height / 2);
 
   // skew = sin(TAU * millis() / skewPeriod) * skewAmount;
-  vary = sin(TAU * millis() / varyPeriod) * varyAmount;
+  vary = cos(TAU * millis() / varyPeriod) * varyAmount;
 
-  shutterPhase = (millis() / shutterPeriod) % 1;
-  shutterClosing = shutterPhase >= .5;
-  float shutterMS = millis() % (shutterPeriod / 2);
-  float shutterStart = (shutterPeriod / 2 - shutterTime) / 2;
-  shutterPos = constrain(norm(shutterMS, shutterStart, shutterStart + shutterTime), 0, 1);
+  tt = millis() % (shutterPeriod * 2); // 0 -> ((ct + pt) * 2)
+  t = tt % shutterPeriod; // 0 -> (ct + pt)
+  firstHalf = tt < shutterPeriod;
 
+  fill(0);
+  circle(0, 0, circleRadius);
   tree.draw(0, 0, TAU, circleRadius);
 }
 

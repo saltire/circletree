@@ -12,11 +12,9 @@ boolean cells[][] = new boolean[xcells][ycells];
 color red = color(255, 0, 0);
 color green = color(0, 255, 0);
 color blue = color(0, 0, 255);
-
 color cyan = color(0, 255, 255);
 color magenta = color(255, 0, 255);
 color yellow = color(255, 255, 0);
-
 color[] addColors = { red, green, blue };
 color[] subColors = { cyan, magenta, yellow };
 
