@@ -1,13 +1,15 @@
 int rate = 30;
 
-String mode = "sphere";
+// String mode = "grid";
+String mode = "polar";
+// String mode = "sphere";
 
 float sizePct = .95; // Percent of the viewport that the grid takes up.
-float mainRadius;
-float totalXSize;
-float totalYSize;
+float radius;
+float gridWidth;
+float gridHeight;
 
-int segmentPoints = 10; // Number of vertices in each line segment.
+int segmentPoints = 15; // Number of vertices in each line segment.
 
 int maxDepth = 8; // Nesting depth of the tree.
 
@@ -18,7 +20,7 @@ float fillNoiseScale = 25;
 
 boolean doTwist = true; // Whether to skew the Y-axis.
 float twistPeriod = 6000;
-float maxTwistAmount = TAU / 8;
+float maxTwistAmount = .125;
 float twistAmount = 0;
 
 boolean doSplit = true; // Whether to vary the splitMod ratio of each cell.
@@ -28,8 +30,8 @@ float splitPeriod = 6000;
 float maxSplitAmount = 1;
 float splitAmount = 0;
 
-boolean doShutter = false; // Whether to use a shutter effect to cycle the fill on and off.
-boolean doColorShutter = false; // Whether to shutter the RGB channels separately.
+boolean doShutter = true; // Whether to use a shutter effect to cycle the fill on and off.
+boolean doColorShutter = true; // Whether to shutter the RGB channels separately.
 float colorNoiseScale = 3;
 float shutterPeriod = 1500; // window for on OR off animation
 float shutterDuration = 700; // animation length within window
@@ -58,18 +60,14 @@ void setup() {
   ellipseMode(RADIUS);
 
   if (mode == "polar") {
-    mainRadius = min(width, height) * sizePct / 2;
-    totalXSize = TAU;
-    totalYSize = mainRadius;
+    radius = min(width, height) * sizePct / 2;
   }
   else if (mode == "sphere") {
-    mainRadius = min(width, height) * sizePct / 2;
-    totalXSize = TAU;
-    totalYSize = TAU / 2;
+    radius = min(width, height) * sizePct / 2;
   }
   else {
-    totalXSize = width * sizePct;
-    totalYSize = height * sizePct;
+    gridWidth = width * sizePct;
+    gridHeight = height * sizePct;
   }
 
   tree = new KDTree(maxDepth);
@@ -93,20 +91,20 @@ void draw() {
 
   if (mode == "polar") {
     translate(width / 2, height / 2);
-    // circle(0, 0, totalYSize);
+    // circle(0, 0, gridHeight);
   }
   else if (mode == "sphere") {
     translate(width / 2, height / 2);
     rotateX(TAU / 4 - isoAngle); // upward for isometric projection with Z pointing up
     rotateZ(TAU / 2); // move seam to the back
-    // sphere(mainRadius * .99); // sphere is drawn with its axis on the Y-axis
+    // sphere(radius * .99); // sphere is drawn with its axis on the Y-axis
   }
   else {
-    translate((width - totalXSize) / 2, (height - totalYSize) / 2);
-    // rect(0, 0, totalXSize, totalYSize);
+    translate((width - gridWidth) / 2, (height - gridHeight) / 2);
+    // rect(0, 0, gridWidth, gridHeight);
   }
 
-  drawTree(tree, 0, 0, totalXSize, totalYSize);
+  drawTree(tree, 0, 0, 1, 1);
 }
 
 void drawTree(KDTree tree, float x, float y, float xSize, float ySize) {
@@ -190,31 +188,38 @@ void drawCell(float x, float y, float xSize, float ySize) {
 
 void drawVertex(float x, float y) {
   if (doTwist && twistAmount != 0) {
-    x += twistAmount * y / totalYSize;
+    x += twistAmount * y;
   }
 
   if (mode == "polar") {
-    PVector v = polarCoords(x, y);
+    PVector v = polarCoords(x, y).mult(radius);
     vertex(v.x, v.y);
   }
   else if (mode == "sphere") {
-    PVector v = sphereCoords(x, y);
+    PVector v = sphereCoords(x, y).mult(radius);
     vertex(v.x, v.y, v.z);
   }
   else {
-    vertex(x, y);
+    vertex(x * gridWidth, y * gridHeight);
   }
 }
 
 PVector polarCoords(float x, float y) {
-  return new PVector(sin(x) * y, cos(x) * y);
+  float ph = x * TAU;
+
+  return new PVector(
+    sin(ph) * y,
+    cos(ph) * y);
 }
 
 PVector sphereCoords(float x, float y) {
+  float ph = x * TAU;
+  float th = y * TAU / 2;
+
   return new PVector(
-    mainRadius * sin(y) * sin(x),
-    mainRadius * sin(y) * cos(x),
-    mainRadius * cos(y));
+    sin(th) * sin(ph),
+    sin(th) * cos(ph),
+    cos(th));
 }
 
 float getShutterPos(float startMod) {
