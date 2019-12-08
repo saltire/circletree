@@ -1,7 +1,3 @@
-float fillNoiseScale = 25;
-float splitNoiseScale = 5;
-float colorNoiseScale = 1;
-
 class KDTree {
   float u;
   float v;
@@ -26,11 +22,12 @@ class KDTree {
     this.depth = depth;
 
     filled = noise(u * fillNoiseScale, v * fillNoiseScale) > .5;
-    splitNoise = getNoise(splitNoiseScale) * map(depth, 0, maxDepth, .25, 1); // Increase with depth
+    splitNoise = posNeg(ease(getNoise(splitNoiseScale), splitNoiseEasing)) *
+      map(depth, 0, maxDepth, .25, 1); // Increase with depth
     colorNoise = new float[] {
-      getNoise(colorNoiseScale, 0),
-      getNoise(colorNoiseScale, 1),
-      getNoise(colorNoiseScale, 2),
+      posNeg(getNoise(colorNoiseScale, 0)),
+      posNeg(getNoise(colorNoiseScale, 1)),
+      posNeg(getNoise(colorNoiseScale, 2)),
     };
 
     if (depth < maxDepth) {
@@ -48,10 +45,10 @@ class KDTree {
   }
 
   float getNoise(float noiseScale) {
-    return lerp(-1, 1, noise(u * noiseScale, v * noiseScale));
+    return noise(u * noiseScale, v * noiseScale);
   }
 
   float getNoise(float noiseScale, float w) {
-    return lerp(-1, 1, noise(u * noiseScale, v * noiseScale, w * noiseScale));
+    return noise(u * noiseScale, v * noiseScale, w * noiseScale);
   }
 }
